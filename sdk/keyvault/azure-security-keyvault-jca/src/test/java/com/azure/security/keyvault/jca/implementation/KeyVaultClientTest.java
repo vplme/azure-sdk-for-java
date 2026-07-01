@@ -6,6 +6,7 @@ package com.azure.security.keyvault.jca.implementation;
 import com.azure.security.keyvault.jca.PropertyConvertorUtils;
 import com.azure.security.keyvault.jca.implementation.model.AccessToken;
 import com.azure.security.keyvault.jca.implementation.model.CertificateItem;
+import com.azure.security.keyvault.jca.implementation.model.CertificateItemAttributes;
 import com.azure.security.keyvault.jca.implementation.model.CertificateListResult;
 import com.azure.security.keyvault.jca.implementation.utils.AccessTokenUtil;
 import com.azure.security.keyvault.jca.implementation.utils.HttpUtil;
@@ -106,6 +107,46 @@ public class KeyVaultClientTest {
             assertEquals(3, result.size());
             assertTrue(result
                 .containsAll(Arrays.asList("fakeCertificateItem1", "fakeCertificateItem2", "fakeCertificateItem3")));
+        }
+    }
+
+    @Test
+    public void testGetAliasSkipsDisabledCertificates() {
+        try (MockedStatic<HttpUtil> utilities = Mockito.mockStatic(HttpUtil.class)) {
+            utilities.when(() -> HttpUtil.validateUri(anyString(), anyString())).thenCallRealMethod();
+            utilities.when(() -> HttpUtil.addTrailingSlashIfRequired(anyString())).thenCallRealMethod();
+
+            // Create fake certificates: one enabled, one disabled and one without attributes.
+            CertificateItemAttributes enabledAttributes = new CertificateItemAttributes();
+            enabledAttributes.setEnabled(true);
+
+            CertificateItem enabledCertificateItem = new CertificateItem();
+            enabledCertificateItem.setId("certificates/enabledCertificate");
+            enabledCertificateItem.setAttributes(enabledAttributes);
+
+            CertificateItemAttributes disabledAttributes = new CertificateItemAttributes();
+            disabledAttributes.setEnabled(false);
+
+            CertificateItem disabledCertificateItem = new CertificateItem();
+            disabledCertificateItem.setId("certificates/disabledCertificate");
+            disabledCertificateItem.setAttributes(disabledAttributes);
+
+            CertificateItem certificateItemWithoutAttributes = new CertificateItem();
+            certificateItemWithoutAttributes.setId("certificates/certificateWithoutAttributes");
+
+            CertificateListResult certificateListResult = new CertificateListResult();
+            certificateListResult.setValue(
+                Arrays.asList(enabledCertificateItem, disabledCertificateItem, certificateItemWithoutAttributes));
+
+            String certificateListResultString = JsonConverterUtil.toJson(certificateListResult);
+
+            utilities.when(() -> HttpUtil.get(notNull(), anyMap())).thenReturn(certificateListResultString);
+
+            KeyVaultClient keyVaultClient = new KeyVaultClient(KEY_VAULT_TEST_URI_GLOBAL, null);
+            List<String> result = keyVaultClient.getAliases();
+
+            assertEquals(2, result.size());
+            assertTrue(result.containsAll(Arrays.asList("enabledCertificate", "certificateWithoutAttributes")));
         }
     }
 

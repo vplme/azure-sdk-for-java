@@ -66,4 +66,22 @@ public class KeyVaultCertificatesTest {
         Assertions.assertFalse(keyVaultCertificates.getAliases().contains("myalias"));
     }
 
+    @Test
+    public void testRefreshCertificatesSkipsCertificatesThatFailToLoad() {
+        List<String> aliases = new ArrayList<>();
+        aliases.add("myalias");
+        aliases.add("inaccessiblealias");
+        when(keyVaultClient.getAliases()).thenReturn(aliases);
+        when(keyVaultClient.getKey("inaccessiblealias", null)).thenThrow(
+            new RuntimeException("Fail to get response from Key Vault because return http status code is 403."));
+
+        Assertions.assertDoesNotThrow(() -> keyVaultCertificates.refreshCertificates());
+        Assertions.assertTrue(keyVaultCertificates.getAliases().contains("myalias"));
+        Assertions.assertFalse(keyVaultCertificates.getAliases().contains("inaccessiblealias"));
+        Assertions.assertEquals(certificate, keyVaultCertificates.getCertificates().get("myalias"));
+        Assertions.assertFalse(keyVaultCertificates.getCertificates().containsKey("inaccessiblealias"));
+        Assertions.assertFalse(keyVaultCertificates.getCertificateKeys().containsKey("inaccessiblealias"));
+        Assertions.assertFalse(keyVaultCertificates.getCertificateChains().containsKey("inaccessiblealias"));
+    }
+
 }

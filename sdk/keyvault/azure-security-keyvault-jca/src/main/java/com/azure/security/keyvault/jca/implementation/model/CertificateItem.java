@@ -20,6 +20,11 @@ public class CertificateItem implements JsonSerializable<CertificateItem> {
     private String id;
 
     /**
+     * Stores the attributes.
+     */
+    private CertificateItemAttributes attributes;
+
+    /**
      * Get the id.
      *
      * @return the id.
@@ -37,10 +42,29 @@ public class CertificateItem implements JsonSerializable<CertificateItem> {
         this.id = id;
     }
 
+    /**
+     * Get the attributes.
+     *
+     * @return the attributes.
+     */
+    public CertificateItemAttributes getAttributes() {
+        return attributes;
+    }
+
+    /**
+     * Set the attributes.
+     *
+     * @param attributes the attributes.
+     */
+    public void setAttributes(CertificateItemAttributes attributes) {
+        this.attributes = attributes;
+    }
+
     @Override
     public JsonWriter toJson(JsonWriter jsonWriter) throws IOException {
         jsonWriter.writeStartObject();
         jsonWriter.writeStringField("id", this.id);
+        jsonWriter.writeJsonField("attributes", this.attributes);
 
         return jsonWriter.writeEndObject();
     }
@@ -66,6 +90,8 @@ public class CertificateItem implements JsonSerializable<CertificateItem> {
 
                 if ("id".equals(fieldName)) {
                     deserializedCertificateItem.id = reader.getString();
+                } else if ("attributes".equals(fieldName)) {
+                    deserializedCertificateItem.attributes = CertificateItemAttributes.fromJson(reader);
                 } else {
                     reader.skipChildren();
                 }

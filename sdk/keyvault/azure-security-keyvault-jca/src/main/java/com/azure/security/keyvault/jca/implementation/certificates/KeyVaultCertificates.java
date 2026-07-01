@@ -15,11 +15,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.WARNING;
 
 /**
  * Store certificates loaded from KeyVault.
  */
 public final class KeyVaultCertificates implements AzureCertificates {
+    private static final Logger LOGGER = Logger.getLogger(KeyVaultCertificates.class.getName());
+
     /**
      * Stores the list of aliases.
      */
@@ -160,20 +165,37 @@ public final class KeyVaultCertificates implements AzureCertificates {
         certificates.clear();
         certificateChains.clear();
 
+        List<String> failedAliases = new ArrayList<>();
+
         Optional.ofNullable(aliases).orElse(Collections.emptyList()).forEach(alias -> {
-            Key key = keyVaultClient.getKey(alias, null);
-            if (!Objects.isNull(key)) {
-                certificateKeys.put(alias, key);
-            }
-            Certificate certificate = keyVaultClient.getCertificate(alias);
-            if (!Objects.isNull(certificate)) {
-                certificates.put(alias, certificate);
-            }
-            Certificate[] certificateChain = keyVaultClient.getCertificateChain(alias);
-            if (!Objects.isNull(certificateChain)) {
-                certificateChains.put(alias, certificateChain);
+            try {
+                Key key = keyVaultClient.getKey(alias, null);
+                if (!Objects.isNull(key)) {
+                    certificateKeys.put(alias, key);
+                }
+                Certificate certificate = keyVaultClient.getCertificate(alias);
+                if (!Objects.isNull(certificate)) {
+                    certificates.put(alias, certificate);
+                }
+                Certificate[] certificateChain = keyVaultClient.getCertificateChain(alias);
+                if (!Objects.isNull(certificateChain)) {
+                    certificateChains.put(alias, certificateChain);
+                }
+            } catch (RuntimeException e) {
+                // A certificate that cannot be loaded (for example, because it is disabled or access to it is
+                // denied) should not prevent the remaining certificates from being loaded.
+                LOGGER.log(WARNING, "Failed to load certificate for alias: " + alias + ". Skipping it.", e);
+
+                failedAliases.add(alias);
+                certificateKeys.remove(alias);
+                certificates.remove(alias);
+                certificateChains.remove(alias);
             }
         });
+
+        if (aliases != null) {
+            aliases.removeAll(failedAliases);
+        }
 
         lastRefreshTime = new Date();
     }

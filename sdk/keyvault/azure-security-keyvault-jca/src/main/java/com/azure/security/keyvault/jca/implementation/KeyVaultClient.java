@@ -288,6 +288,13 @@ public class KeyVaultClient {
                 for (CertificateItem certificateItem : certificateListResult.getValue()) {
                     String id = certificateItem.getId();
                     String alias = getCertificateNameFromCertificateItemId(id);
+
+                    if (certificateItem.getAttributes() != null
+                        && Boolean.FALSE.equals(certificateItem.getAttributes().getEnabled())) {
+                        LOGGER.log(INFO, "Skipping disabled certificate: {0}", alias);
+                        continue;
+                    }
+
                     result.add(alias);
                 }
             } else {
@@ -382,7 +389,10 @@ public class KeyVaultClient {
         String response = HttpUtil.get(uri, headers);
 
         if (response == null) {
-            throw new NullPointerException();
+            LOGGER.log(WARNING, "No response when getting certificate chain for alias: {0}", alias);
+            LOGGER.exiting("KeyVaultClient", "getCertificateChain", null);
+
+            return null;
         }
 
         SecretBundle secretBundle = null;

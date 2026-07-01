@@ -7,6 +7,7 @@
 ### Breaking Changes
 
 ### Bugs Fixed
+- Fixed an issue where a single disabled certificate in a Key Vault caused `KeyStore` initialization to fail with a `403 Forbidden` error, even when the application only used other, enabled certificates. Disabled certificates are now skipped when listing certificates, and a failure to load an individual certificate no longer prevents the remaining certificates from being loaded.
 
 ### Other Changes
 
