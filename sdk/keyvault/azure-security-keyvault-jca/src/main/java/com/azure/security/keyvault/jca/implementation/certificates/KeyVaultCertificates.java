@@ -107,7 +107,7 @@ public final class KeyVaultCertificates implements AzureCertificates {
      * @return Certificate aliases.
      */
     @Override
-    public List<String> getAliases() {
+    public synchronized List<String> getAliases() {
         refreshCertificatesIfNeeded();
 
         return aliases;
@@ -224,7 +224,7 @@ public final class KeyVaultCertificates implements AzureCertificates {
      * @param alias Deleted certificate.
      */
     @Override
-    public void deleteEntry(String alias) {
+    public synchronized void deleteEntry(String alias) {
         if (aliases != null) {
             aliases.remove(alias);
         }
